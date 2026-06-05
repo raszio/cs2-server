@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  cs2:
+    image: joedwards32/cs2:latest
+    container_name: cs2-server
+    restart: unless-stopped
+    ports:
+      # Game traffic (TCP and UDP)
+      - "27015:27015/tcp"
+      - "27015:27015/udp"
+      # RCON port (Note: CS2 RCON actually runs on 27015/tcp, but keeping your mapping)
+      - "27020:27020/udp"
+      # Steam server browser
+      - "27005:27005/udp"
+    environment:
+      # Server identity
+      CS2_SERVERNAME: "GG SERVER"
+      CS2_PORT: 27015
+
+      # GSLT from Steam - required for public servers
+      SRCDS_TOKEN: "568D0FED05DE7D8C50B78C61"
+
+      # RCON password for remote administration
+      CS2_RCONPW: "jfksdlfjldsf"
+
+      # Game mode settings
+      # 0 = Casual, 1 = Competitive, 2 = Wingman, 3 = Deathmatch
+      CS2_GAMETYPE: 0
+      CS2_GAMEMODE: 1
+
+      # Map settings
+      CS2_MAPNAME: "de_dust2"
+      CS2_MAPGROUP: "mg_active"
+
+      # Player settings
+      CS2_MAXPLAYERS: 12
+      CS2_BOT_DIFFICULTY: 2
+      CS2_BOT_QUOTA: 0
+      CS2_BOT_QUOTA_MODE: "fill"
+
+      # Network settings
+      CS2_LAN: 0
+      CS2_CHEATS: 0
+
+      # Server password (empty for public)
+      CS2_PW: "jfksdlfjldsf"
+
+      # Additional server cvars
+      CS2_ADDITIONAL_ARGS: "+host_workshop_map 37384432432"
+
+    volumes:
+      # This stores all the 40GB+ game files safely on your host drive
+      - ./cs2-data:/home/steam/cs2-dedicated/

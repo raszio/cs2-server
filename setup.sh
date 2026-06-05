@@ -26,7 +26,7 @@ case "$OS_ID" in
         # Check if dnf is available (AL2023) or yum (AL2)
         if command -v dnf >/dev/null 2>&1; then
             sudo dnf update -y
-            sudo dnf install -y git curl docker docker-compose-plugin
+            sudo dnf install -y git curl docker docker-compose
         else
             sudo yum update -y
             sudo yum install -y git curl docker

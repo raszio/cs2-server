@@ -18,35 +18,47 @@ case "$OS_ID" in
     ubuntu|debian)
         echo "Detected $OS_ID. Updating and installing dependencies..."
         sudo apt-get update
-        sudo apt-get upgrade -y
-        sudo apt-get install -y git curl docker.io docker-compose-v2
+        sudo apt-get install -y git curl docker.io
+        # Try to install compose via package manager
+        sudo apt-get install -y docker-compose-v2 || sudo apt-get install -y docker-compose || echo "Package manager compose install failed, will try manual."
         ;;
     amzn)
         echo "Detected Amazon Linux. Updating and installing dependencies..."
-        # Check if dnf is available (AL2023) or yum (AL2)
         if command -v dnf >/dev/null 2>&1; then
             sudo dnf update -y
-            sudo dnf install -y git curl docker docker-compose
+            sudo dnf install -y git curl docker
+            # Try both common names for compose on AL2023
+            sudo dnf install -y docker-compose || sudo dnf install -y docker-compose-plugin || echo "DNF compose install failed."
         else
             sudo yum update -y
             sudo yum install -y git curl docker
-            # For AL2, we might need to install docker-compose manually
-            sudo systemctl start docker
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
         fi
         ;;
     *)
         echo "Unsupported OS: $OS_ID"
-        echo "This script supports Ubuntu, Debian, and Amazon Linux."
         exit 1
         ;;
 esac
 
-# Start and enable Docker
+# Start and enable Docker early to ensure we can test for compose
 echo "Enabling and starting Docker service..."
 sudo systemctl enable docker
 sudo systemctl start docker
+
+# Check if docker compose (v2) or docker-compose (v1/v2) is available
+if docker compose version >/dev/null 2>&1; then
+    echo "Docker Compose (v2) is already installed."
+elif docker-compose version >/dev/null 2>&1; then
+    echo "Docker-compose is already installed."
+else
+    echo "Docker Compose not found. Installing manually from GitHub..."
+    COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    sudo curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    # Create a symbolic link so 'docker compose' works if the binary is in /usr/local/bin/docker-compose
+    sudo mkdir -p /usr/local/lib/docker/cli-plugins
+    sudo ln -sf /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+fi
 
 # Add user to docker group to run without sudo
 echo "Adding user $USER to docker group..."
